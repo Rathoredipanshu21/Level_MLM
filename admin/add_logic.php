@@ -16,18 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id']) && $_SES
         die("<script>alert('Username already exists!'); window.location='index.php';</script>");
     }
 
-    // 2. Check Admin Child Limit (Optional? Usually Admin has no limit, but sticking to 5 for consistency if you want)
-    // We will apply the same logic: Max 5 direct legs for Master too.
+    // 2. Check Admin Child Limit (Max 5 for Master too, to be consistent)
     $countStmt = $pdo->prepare("SELECT count(*) FROM users WHERE parent_id = ?");
     $countStmt->execute([$parent_id]);
     if ($countStmt->fetchColumn() >= 5) {
-        die("<script>alert('Limit Reached: You already have 5 direct Level 1 associates.'); window.location='index.php';</script>");
+        die("<script>alert('Limit Reached: You already have 5 direct Level 1 associates. Create a new root position?'); window.location='index.php';</script>");
     }
 
-    // 3. Determine Level
-    // If Master is effectively Level 0, new child is Level 1.
-    // If Master was -1, new child is 0. 
-    // Based on user prompt "Level 1 Associate", we assume Master is 0.
+    // 3. Determine Level (New child of Master is Level 1)
     $new_level = 1;
 
     try {
@@ -38,13 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id']) && $_SES
         $stmt->execute([$name, $username, $password, $parent_id, $new_level]);
         $new_user_id = $pdo->lastInsertId();
 
-        // 5. Money Logic
-        // Since Admin IS the parent AND the Master:
-        // Total Fee = 2500.
-        // Master Cut = 2000 (Goes to self).
-        // Commission = 500 (Goes to Parent... which is self).
-        // So Admin gets the full 2500 added to wallet.
-        
+        // 5. Money Logic for Admin
+        // Admin gets full fee added to wallet since there is no upline to pay.
         $reg_fee = getSetting($pdo, 'registration_fee');
 
         $pdo->prepare("UPDATE users SET wallet = wallet + ? WHERE id = ?")->execute([$reg_fee, $parent_id]);

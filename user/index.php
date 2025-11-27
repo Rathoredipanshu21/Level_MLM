@@ -22,6 +22,9 @@ $stmt->execute([$user_id]);
 $direct_team = $stmt->fetchAll();
 $direct_count = count($direct_team);
 
+// "Out of Game" Status
+$is_limit_reached = ($direct_count >= 5);
+
 // Recursive Function to Draw Tree
 function buildTree($pdo, $parentId) {
     $stmt = $pdo->prepare("SELECT * FROM users WHERE parent_id = ?");
@@ -104,29 +107,42 @@ function buildTree($pdo, $parentId) {
             </div>
 
             <!-- Team Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-blue-500" data-aos="fade-up" data-aos-delay="100">
+            <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 <?php echo $is_limit_reached ? 'border-red-500' : 'border-blue-500'; ?>" data-aos="fade-up" data-aos-delay="100">
                  <div class="flex justify-between items-start">
                     <div>
                         <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Direct Associates</p>
                         <h2 class="text-3xl font-extrabold text-gray-800 mt-2"><?php echo $direct_count; ?> <span class="text-sm text-gray-400 font-normal">/ 5 Max</span></h2>
+                        <?php if($is_limit_reached): ?>
+                            <span class="inline-block mt-2 px-2 py-1 bg-red-100 text-red-600 text-xs font-bold rounded">Limit Reached</span>
+                        <?php endif; ?>
                     </div>
-                    <div class="bg-blue-100 p-3 rounded-xl text-blue-600 text-xl shadow-sm">
+                    <div class="<?php echo $is_limit_reached ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'; ?> p-3 rounded-xl text-xl shadow-sm">
                         <i class="fas fa-users"></i>
                     </div>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-1.5 mt-4">
-                    <div class="bg-blue-500 h-1.5 rounded-full" style="width: <?php echo ($direct_count/5)*100; ?>%"></div>
+                    <div class="<?php echo $is_limit_reached ? 'bg-red-500' : 'bg-blue-500'; ?> h-1.5 rounded-full" style="width: <?php echo ($direct_count/5)*100; ?>%"></div>
                 </div>
             </div>
 
-            <!-- Add Button -->
-            <div onclick="openModal()" class="bg-gradient-to-br from-green-500 to-green-700 cursor-pointer p-6 rounded-2xl shadow-lg text-white transform hover:-translate-y-1 transition duration-300 flex flex-col items-center justify-center text-center group" data-aos="fade-up" data-aos-delay="200">
-                <div class="bg-white/20 p-3 rounded-full mb-3 group-hover:bg-white/30 transition">
-                    <i class="fas fa-user-plus text-2xl"></i>
+            <!-- Add Button (Conditional) -->
+            <?php if(!$is_limit_reached): ?>
+                <div onclick="openModal()" class="bg-gradient-to-br from-green-500 to-green-700 cursor-pointer p-6 rounded-2xl shadow-lg text-white transform hover:-translate-y-1 transition duration-300 flex flex-col items-center justify-center text-center group" data-aos="fade-up" data-aos-delay="200">
+                    <div class="bg-white/20 p-3 rounded-full mb-3 group-hover:bg-white/30 transition">
+                        <i class="fas fa-user-plus text-2xl"></i>
+                    </div>
+                    <h3 class="font-bold text-lg">Add New Member</h3>
+                    <p class="text-xs text-green-100 mt-1 opacity-80">Expand your network tree</p>
                 </div>
-                <h3 class="font-bold text-lg">Add New Member</h3>
-                <p class="text-xs text-green-100 mt-1 opacity-80">Expand your network tree</p>
-            </div>
+            <?php else: ?>
+                <div class="bg-gray-100 p-6 rounded-2xl shadow-lg text-gray-400 border border-gray-200 flex flex-col items-center justify-center text-center" data-aos="fade-up" data-aos-delay="200">
+                    <div class="bg-gray-200 p-3 rounded-full mb-3">
+                        <i class="fas fa-ban text-2xl"></i>
+                    </div>
+                    <h3 class="font-bold text-lg text-gray-500">Add Limit Reached</h3>
+                    <p class="text-xs mt-1">You have filled your 5 direct slots. <br>Contact Admin for a new Level/ID.</p>
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Content Split -->

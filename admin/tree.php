@@ -43,10 +43,16 @@ function buildOrgTree($pdo, $parentId) {
         foreach ($children as $child) {
             echo '<li>';
             
-            // Styling based on level
+            // Default Styling
             $cardClass = "bg-white text-gray-700 border-t-4 border-blue-500 hover:shadow-lg hover:-translate-y-1";
             $iconBg = "bg-blue-100 text-blue-600";
             
+            // Check Child Count for "Out of Game" Status
+            $subStmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE parent_id = ?");
+            $subStmt->execute([$child['id']]);
+            $subCount = $subStmt->fetchColumn();
+
+            // Color Logic
             if ($child['level'] == 2) { 
                 $cardClass = "bg-white text-gray-700 border-t-4 border-green-500 hover:shadow-lg hover:-translate-y-1";
                 $iconBg = "bg-green-100 text-green-600";
@@ -55,29 +61,37 @@ function buildOrgTree($pdo, $parentId) {
                 $cardClass = "bg-white text-gray-700 border-t-4 border-purple-500 hover:shadow-lg hover:-translate-y-1";
                 $iconBg = "bg-purple-100 text-purple-600";
             }
+            
+            // "Out of Game" Logic (5 Directs Completed)
+            if ($subCount >= 5) {
+                // RED STYLE for Completed/Out users
+                $cardClass = "bg-red-50 text-gray-800 border-t-4 border-red-600 shadow-md ring-2 ring-red-200";
+                $iconBg = "bg-red-200 text-red-700";
+            }
 
             // Node Card
             echo '<div onclick="openModal('.$child['id'].')" class="tree-node cursor-pointer relative inline-block p-4 rounded-xl shadow-md transition-all duration-300 w-48 ' . $cardClass . '">';
                 
-                // Notification Badge
-                $subStmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE parent_id = ?");
-                $subStmt->execute([$child['id']]);
-                $subCount = $subStmt->fetchColumn();
-                
+                // Notification Badge for children count
                 if($subCount > 0){
-                    echo '<span class="absolute -top-3 -right-3 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm">'.$subCount.'</span>';
+                    $badgeColor = ($subCount >= 5) ? 'bg-red-600' : 'bg-blue-500';
+                    echo '<span class="absolute -top-3 -right-3 w-6 h-6 '.$badgeColor.' text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm">'.$subCount.'</span>';
                 }
 
                 echo '<div class="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-lg font-bold mb-2 '.$iconBg.'">';
                 echo '<i class="fas fa-user"></i>';
                 echo '</div>';
 
-                // --- MODIFIED LINE: Name (Username) ---
                 echo '<h3 class="font-bold text-sm text-gray-800 leading-tight mb-1">' . htmlspecialchars($child['name']) . ' <br><span class="text-xs text-gray-500 font-normal">(' . htmlspecialchars($child['username']) . ')</span></h3>';
                 
-                echo '<p class="text-xs text-gray-500 mb-1">Level ' . $child['level'] . '</p>';
-                echo '<div class="text-xs font-mono bg-gray-50 rounded px-2 py-1 border border-gray-100 mt-2">';
-                echo '<span class="text-green-600 font-bold">₹' . number_format($child['wallet']) . '</span>';
+                if ($subCount >= 5) {
+                     echo '<p class="text-[10px] text-red-600 font-bold uppercase mb-1">Limit Reached</p>';
+                } else {
+                     echo '<p class="text-xs text-gray-500 mb-1">Level ' . $child['level'] . '</p>';
+                }
+                
+                echo '<div class="text-xs font-mono bg-white/50 rounded px-2 py-1 border border-gray-200 mt-2">';
+                echo '<span class="text-green-700 font-bold">₹' . number_format($child['wallet']) . '</span>';
                 echo '</div>';
 
             echo '</div>';
@@ -202,7 +216,6 @@ function buildOrgTree($pdo, $parentId) {
                     const u = data.user;
                     const t = data.transactions;
 
-                    // --- MODIFIED LINE BELOW: Added (${u.username}) next to Name ---
                     let html = `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">

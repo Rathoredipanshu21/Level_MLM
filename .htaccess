@@ -1,0 +1,15 @@
+# .htaccess
+
+# Set the custom 404 error page
+ErrorDocument 404 /404.php
+
+# Turn on the rewrite engine
+RewriteEngine On
+
+# Ensure the request is not for an existing file
+RewriteCond %{REQUEST_FILENAME} !-f
+# Ensure the request is not for an existing directory
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Rewrite the request to the corresponding .php file
+RewriteRule ^(.+)$ $1.php [L,QSA]

@@ -114,27 +114,111 @@ function buildOrgTree($pdo, $parentId) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     
     <style>
-        .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: flex; justify-content: center; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: all 0.5s; }
-        .tree li::before, .tree li::after{ content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #ccc; width: 50%; height: 20px; }
-        .tree li::after{ right: auto; left: 50%; border-left: 2px solid #ccc; }
-        .tree li:only-child::after, .tree li:only-child::before { display: none; }
-        .tree li:only-child{ padding-top: 0;}
-        .tree li:first-child::before, .tree li:last-child::after{ border: 0 none; }
-        .tree li:last-child::before{ border-right: 2px solid #ccc; border-radius: 0 5px 0 0; }
-        .tree li:first-child::after{ border-radius: 5px 0 0 0; }
-        .tree ul ul::before{ content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #ccc; width: 0; height: 20px; }
-        .tree li a:hover+ul li::after, .tree li a:hover+ul li::before, .tree li a:hover+ul::before, .tree li a:hover+ul ul::before{ border-color:  #94a0b4; }
+        /* Tree Container Styling */
+        .tree-viewport {
+            width: 100%;
+            height: calc(100vh - 72px); /* Full height minus navbar */
+            overflow: auto; /* Enables both X and Y scrolling */
+            background-color: #f9fafb;
+            cursor: grab;
+            padding: 50px 20px;
+            text-align: center; /* Centers the inner tree div */
+        }
+
+        .tree-viewport:active {
+            cursor: grabbing;
+        }
+
+        /* The Tree Structure */
+        .tree {
+            display: inline-block; /* Allows text-align center to work on it */
+            min-width: 100%; /* Ensures it fills screen if content is small */
+            width: max-content; /* Expands beyond screen if content is large */
+            margin: 0 auto;
+        }
+
+        .tree ul {
+            padding-top: 20px; 
+            position: relative; 
+            transition: all 0.5s;
+            display: flex;
+            justify-content: center; /* Centers children under parent */
+        }
+
+        .tree li {
+            text-align: center;
+            list-style-type: none;
+            position: relative;
+            padding: 20px 10px 0 10px; /* Increased padding for spacing */
+            transition: all 0.5s;
+        }
+
+        /* Connector Lines */
+        .tree li::before, .tree li::after {
+            content: '';
+            position: absolute; 
+            top: 0; 
+            right: 50%;
+            border-top: 2px solid #ccc;
+            width: 50%; 
+            height: 20px;
+        }
+        .tree li::after {
+            right: auto; 
+            left: 50%;
+            border-left: 2px solid #ccc;
+        }
+
+        /* Removing connectors for single children */
+        .tree li:only-child::after, .tree li:only-child::before {
+            display: none;
+        }
+        .tree li:only-child { 
+            padding-top: 0;
+        }
+
+        /* Removing connectors for first/last children to create the bracket effect */
+        .tree li:first-child::before, .tree li:last-child::after {
+            border: 0 none;
+        }
+        .tree li:last-child::before {
+            border-right: 2px solid #ccc;
+            border-radius: 0 5px 0 0;
+        }
+        .tree li:first-child::after {
+            border-radius: 5px 0 0 0;
+        }
+
+        /* Downward connector from parent */
+        .tree ul ul::before {
+            content: '';
+            position: absolute; 
+            top: 0; 
+            left: 50%;
+            border-left: 2px solid #ccc;
+            width: 0; 
+            height: 20px;
+        }
+
+        /* Hover Effects on Lines */
+        .tree li a:hover+ul li::after, 
+        .tree li a:hover+ul li::before, 
+        .tree li a:hover+ul::before, 
+        .tree li a:hover+ul ul::before {
+            border-color: #94a0b4;
+        }
         
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen">
+<body class="bg-gray-100 font-sans h-screen overflow-hidden"> 
 
-    <nav class="bg-white shadow-sm sticky top-0 z-40">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+    <nav class="bg-white shadow-sm relative z-40 h-[72px] flex items-center">
+        <div class="container mx-auto px-6 flex justify-between items-center">
             <a href="index.php" class="text-gray-500 hover:text-gray-800 flex items-center gap-2 transition">
                 <i class="fas fa-arrow-left"></i> Back
             </a>
@@ -142,8 +226,8 @@ function buildOrgTree($pdo, $parentId) {
         </div>
     </nav>
 
-    <div class="min-h-screen py-10 overflow-x-auto bg-gray-50 flex justify-center pb-32">
-        <div class="tree min-w-max px-4">
+    <div id="treeViewport" class="tree-viewport custom-scrollbar">
+        <div id="treeContent" class="tree">
             <ul>
                 <li>
                     <?php
@@ -153,7 +237,7 @@ function buildOrgTree($pdo, $parentId) {
                         $root = $stmt->fetch();
                     ?>
                     
-                    <div class="relative inline-block mx-auto cursor-pointer" onclick="openModal(<?php echo $root['id']; ?>)">
+                    <div id="rootNode" class="relative inline-block mx-auto cursor-pointer" onclick="openModal(<?php echo $root['id']; ?>)">
                         <div class="bg-teal-800 text-white p-6 rounded-2xl shadow-xl border-b-8 border-yellow-400 w-64 relative z-10 hover:scale-105 transition-transform">
                             <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-yellow-500 text-2xl shadow-inner border-4 border-yellow-100 mx-auto mb-3">
                                 <i class="fas fa-crown"></i>
@@ -192,6 +276,26 @@ function buildOrgTree($pdo, $parentId) {
     </div>
 
     <script>
+        // ----------------------------------------------------
+        // AUTOMATICALLY SCROLL TO CENTER ON LOAD
+        // ----------------------------------------------------
+        window.onload = function() {
+            const viewport = document.getElementById('treeViewport');
+            const content = document.getElementById('treeContent');
+
+            // Calculate the center position
+            // (Total Content Width - Viewport Width) / 2
+            const scrollCenter = (content.offsetWidth - viewport.offsetWidth) / 2;
+
+            // Only scroll if the content is wider than the screen
+            if (scrollCenter > 0) {
+                viewport.scrollLeft = scrollCenter;
+            }
+        };
+
+        // ----------------------------------------------------
+        // MODAL LOGIC
+        // ----------------------------------------------------
         function openModal(userId) {
             const modal = document.getElementById('infoModal');
             const content = document.getElementById('modalContent');

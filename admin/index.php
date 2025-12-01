@@ -1,235 +1,303 @@
 <?php
 session_start();
-include '../config/db.php';
-
-// Security Check
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'master') {
-    header("Location: ../index.php");
-    exit;
+// Security Check - Uncomment in production
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'master') {
+    // header("Location: ../index.php"); 
 }
-
-// Update Settings Logic
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_settings'])) {
-    $reg_fee = $_POST['reg_fee'];
-    $master_cut = $_POST['master_cut'];
-    $comm_percent = $_POST['comm_percent'];
-
-    $pdo->prepare("UPDATE settings SET meta_value = ? WHERE meta_key = 'registration_fee'")->execute([$reg_fee]);
-    $pdo->prepare("UPDATE settings SET meta_value = ? WHERE meta_key = 'master_cut'")->execute([$master_cut]);
-    $pdo->prepare("UPDATE settings SET meta_value = ? WHERE meta_key = 'level_commission_percent'")->execute([$comm_percent]);
-    $success_msg = "Settings updated successfully!";
-}
-
-// Fetch Data
-$master_wallet = $pdo->query("SELECT wallet FROM users WHERE role = 'master'")->fetchColumn();
-$total_users = $pdo->query("SELECT count(*) FROM users WHERE role = 'user'")->fetchColumn();
-$transactions = $pdo->query("SELECT * FROM transactions WHERE user_id = 1 ORDER BY id DESC LIMIT 10")->fetchAll();
-
-// Fetch Admin's Direct Children Count (For the card)
-$admin_children = $pdo->prepare("SELECT count(*) FROM users WHERE parent_id = ?");
-$admin_children->execute([$_SESSION['user_id']]);
-$my_directs = $admin_children->fetchColumn();
-
-$reg_fee = getSetting($pdo, 'registration_fee');
-$master_cut = getSetting($pdo, 'master_cut');
-$comm_percent = getSetting($pdo, 'level_commission_percent');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Admin | Control Panel</title>
+    <title>Admin Console | eBiotheraphy</title>
+    <link rel="icon" href="../Assets/icon.png" type="image/png">
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <style>
-        .modal { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
-        .modal.active { opacity: 1; visibility: visible; }
-        .modal-content { transform: scale(0.9); transition: all 0.3s ease-in-out; }
-        .modal.active .modal-content { transform: scale(1); }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Sidebar Gradient */
+        .sidebar-gradient {
+            background: linear-gradient(150deg, #17A24E 0%, #1A8E7D 100%);
+        }
+
+        /* Nav Item Styling */
+        .nav-item {
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 16px;
+            margin-bottom: 4px;
+        }
+
+        /* Hover Effect */
+        .nav-item:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+
+        /* Active State - Floating White Pill */
+        .nav-item.active {
+            background: white;
+            color: #17A24E; /* Text becomes primary green */
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            font-weight: 700;
+        }
+        
+        .nav-item.active i {
+            color: #1A8E7D; /* Icon becomes teal */
+        }
+
+        /* Text Gradient for Header */
+        .text-gradient {
+            background: linear-gradient(to right, #17A24E, #1A8E7D);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Iframe Transition */
+        #content-frame {
+            transition: opacity 0.4s ease-in-out;
+        }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-600">
 
-    <!-- Navbar -->
-    <nav class="bg-white shadow-lg sticky top-0 z-50">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-yellow-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg">
-                    <i class="fas fa-crown"></i>
-                </div>
-                <h1 class="text-2xl font-bold text-gray-800">Master Admin</h1>
-            </div>
-            <a href="logout.php" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-full shadow transition transform hover:scale-105">
-                <i class="fas fa-sign-out-alt mr-2"></i>Logout
-            </a>
-        </div>
-    </nav>
-
-    <div class="container mx-auto p-6">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-80 sidebar-gradient text-white flex flex-col transition-transform duration-300 transform -translate-x-full md:relative md:translate-x-0 shadow-2xl">
         
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <!-- Wallet -->
-            <div class="bg-gradient-to-r from-green-600 to-green-500 p-6 rounded-2xl shadow-xl text-white md:col-span-2" data-aos="fade-up">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-green-100 text-sm uppercase tracking-wider font-semibold">Total Master Wallet</p>
-                        <h2 class="text-4xl font-bold mt-2">₹ <?php echo number_format($master_wallet, 2); ?></h2>
-                    </div>
-                    <div class="text-5xl opacity-30"><i class="fas fa-wallet"></i></div>
+        <!-- Brand -->
+        <div class="h-28 flex items-center px-10 border-b border-white/10">
+            <div class="flex items-center gap-4 group cursor-pointer">
+                <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 shadow-lg group-hover:scale-105 transition duration-300">
+                    <i class="fas fa-leaf text-xl"></i>
+                </div>
+                <div>
+                    <span class="font-serif font-bold text-2xl text-white tracking-wide block leading-none drop-shadow-sm">eBiotheraphy</span>
+                    <p class="text-[10px] uppercase tracking-[0.3em] text-white/80 font-bold mt-1.5 ml-0.5">Admin Console</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Total Users -->
-            <div class="bg-white p-6 rounded-2xl shadow-xl border-l-4 border-blue-500" data-aos="fade-up" data-aos-delay="100">
-                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm uppercase tracking-wider font-semibold">Total Users</p>
-                        <h2 class="text-3xl font-bold mt-2 text-gray-800"><?php echo $total_users; ?></h2>
-                    </div>
-                    <div class="text-4xl text-blue-200"><i class="fas fa-users"></i></div>
-                </div>
+        <!-- Navigation -->
+        <nav class="flex-1 py-10 px-6 space-y-2 overflow-y-auto no-scrollbar">
+            
+            <!-- Section Label -->
+            <div class="px-6 mb-4 mt-2">
+                <p class="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Network</p>
             </div>
 
-            <!-- Tree View Link -->
-            <a href="tree.php" class="bg-white p-6 rounded-2xl shadow-xl border-l-4 border-purple-500 hover:bg-purple-50 transition cursor-pointer" data-aos="fade-up" data-aos-delay="200">
-                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm uppercase tracking-wider font-semibold">Network Tree</p>
-                        <h2 class="text-xl font-bold mt-2 text-purple-700">View Full Graph <i class="fas fa-arrow-right text-xs ml-1"></i></h2>
-                    </div>
-                    <div class="text-4xl text-purple-200"><i class="fas fa-network-wired"></i></div>
+            <a href="tree.php" target="content-frame" class="nav-item flex items-center gap-5 px-6 py-4 text-sm font-medium">
+                <i class="fas fa-sitemap w-5 text-lg transition-transform group-hover:scale-110"></i>
+                <span class="nav-text tracking-wide text-[15px]">Genealogy Tree</span>
+            </a>
+
+            <a href="all_members.php" target="content-frame" class="nav-item flex items-center gap-5 px-6 py-4 text-sm font-medium">
+                <i class="fas fa-users w-5 text-lg transition-transform group-hover:scale-110"></i>
+                <span class="nav-text tracking-wide text-[15px]">Member Registry</span>
+            </a>
+
+            <!-- Section Label -->
+            <div class="px-6 mb-4 mt-8">
+                <p class="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Management</p>
+            </div>
+
+            <a href="approve_members.php" target="content-frame" class="nav-item flex items-center gap-5 px-6 py-4 text-sm font-medium">
+                <i class="fas fa-user-check w-5 text-lg transition-transform group-hover:scale-110"></i>
+                <span class="nav-text tracking-wide text-[15px]">Approvals</span>
+                <span class="ml-auto bg-white/20 backdrop-blur text-white text-[9px] font-bold px-2 py-1 rounded-full border border-white/20">NEW</span>
+            </a>
+
+            <!-- Section Label -->
+            <div class="px-6 mb-4 mt-8">
+                <p class="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">System</p>
+            </div>
+
+            <a href="bank_settings.php" target="content-frame" class="nav-item flex items-center gap-5 px-6 py-4 text-sm font-medium">
+                <i class="fas fa-landmark w-5 text-lg transition-transform group-hover:scale-110"></i>
+                <span class="nav-text tracking-wide text-[15px]">Bank Settings</span>
+            </a>
+
+            <a href="settings.php" target="content-frame" class="nav-item flex items-center gap-5 px-6 py-4 text-sm font-medium">
+                <i class="fas fa-cogs w-5 text-lg transition-transform group-hover:scale-110"></i>
+                <span class="nav-text tracking-wide text-[15px]">Financial Logic</span>
+            </a>
+
+        </nav>
+
+        <!-- Profile/Logout -->
+        <div class="p-8 border-t border-white/10 bg-black/10 backdrop-blur-sm">
+            <a href="logout.php" class="group flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/10 hover:bg-white hover:text-[#17A24E] transition-all duration-300 border border-white/10 hover:border-white shadow-lg">
+                <div class="w-10 h-10 rounded-full bg-white text-[#17A24E] flex items-center justify-center font-bold text-sm shadow-sm group-hover:bg-[#17A24E] group-hover:text-white transition-colors">
+                    <i class="fas fa-power-off"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-xs font-bold uppercase tracking-wider group-hover:translate-x-1 transition-transform">Sign Out</p>
+                    <p class="text-[10px] opacity-70 group-hover:translate-x-1 transition-transform delay-75">End Session</p>
                 </div>
             </a>
         </div>
+    </aside>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col h-screen relative bg-slate-50">
+        
+        <!-- Header -->
+        <header class="h-28 flex items-center justify-between px-10 z-20 bg-slate-50">
             
-            <!-- Left Column: Settings & Add Member -->
-            <div class="lg:col-span-1 space-y-8">
+            <div class="flex items-center gap-6">
+                <!-- Mobile Toggle -->
+                <button id="menu-toggle" class="md:hidden w-12 h-12 flex items-center justify-center rounded-2xl bg-white text-[#17A24E] shadow-lg shadow-slate-200 hover:scale-105 transition">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
                 
-                <!-- Add Direct Associate (Admin's Branch) -->
-                <div class="bg-gradient-to-br from-gray-800 to-gray-900 text-white p-6 rounded-2xl shadow-lg" data-aos="fade-right">
-                    <h3 class="text-xl font-bold mb-2"><i class="fas fa-user-plus mr-2"></i>Add Direct Associate</h3>
-                    <p class="text-gray-400 text-sm mb-4">You have <b><?php echo $my_directs; ?></b> direct Level 1 associates.</p>
-                    <button onclick="openModal()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg transition shadow-md transform hover:scale-[1.02]">
-                        Add New Member
-                    </button>
-                </div>
-
-                <!-- Settings Form -->
-                <div class="bg-white p-8 rounded-2xl shadow-lg" data-aos="fade-right" data-aos-delay="100">
-                    <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <i class="fas fa-cogs text-gray-500"></i> Dynamic Fee Control
-                    </h3>
-                    
-                    <?php if(isset($success_msg)): ?>
-                        <div class="bg-green-100 text-green-700 p-3 rounded mb-4 text-sm font-bold text-center">
-                            <?php echo $success_msg; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <form method="POST">
-                        <div class="mb-5">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Registration Fee (₹)</label>
-                            <input type="number" name="reg_fee" value="<?php echo $reg_fee; ?>" class="w-full bg-gray-50 border border-gray-300 rounded p-3 focus:border-green-500 focus:outline-none transition">
-                        </div>
-                        <div class="mb-5">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Master Cut Amount (₹)</label>
-                            <input type="number" name="master_cut" value="<?php echo $master_cut; ?>" class="w-full bg-gray-50 border border-gray-300 rounded p-3 focus:border-green-500 focus:outline-none transition">
-                        </div>
-                        <div class="mb-6">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Level Commission (%)</label>
-                            <input type="number" name="comm_percent" value="<?php echo $comm_percent; ?>" class="w-full bg-gray-50 border border-gray-300 rounded p-3 focus:border-green-500 focus:outline-none transition">
-                        </div>
-                        <button type="submit" name="update_settings" class="w-full bg-gray-800 text-white font-bold py-3 rounded hover:bg-black transition shadow-lg">
-                            Update Settings
-                        </button>
-                    </form>
+                <div>
+                    <h2 id="page-title" class="font-serif text-4xl font-bold text-slate-800 tracking-tight">Dashboard</h2>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="w-2 h-2 rounded-full bg-[#17A24E] animate-pulse"></span>
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider" id="date-display">System Active</p>
+                    </div>
                 </div>
             </div>
+            
+            <div class="flex items-center gap-8">
+                <a href="../index.php" target="_blank" class="hidden md:flex items-center gap-3 px-6 py-3 rounded-full bg-white border border-slate-100 shadow-md shadow-slate-100 hover:shadow-xl hover:scale-105 transition-all group">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-gradient">Visit Website</span> 
+                    <i class="fas fa-external-link-alt text-xs text-slate-400 group-hover:text-[#1A8E7D]"></i>
+                </a>
+                
+                <div class="flex items-center gap-5">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold text-slate-800">
+                            <?php echo isset($_SESSION['admin']) ? htmlspecialchars($_SESSION['admin']) : 'Master Admin'; ?>
+                        </p>
+                        <p class="text-[10px] font-bold text-[#17A24E] uppercase tracking-widest">Super User</p>
+                    </div>
+                    <!-- Avatar with Gradient Ring -->
+                    <div class="p-1 rounded-full bg-gradient-to-tr from-[#17A24E] to-[#1A8E7D] shadow-xl">
+                        <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-[#17A24E]">
+                            <i class="fas fa-user-shield text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-            <!-- Right Column: Transaction Logs -->
-            <div class="bg-white p-8 rounded-2xl shadow-lg lg:col-span-2" data-aos="fade-left">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-list-alt text-gray-500"></i> Incoming Payments Log
-                    </h3>
-                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Latest 10</span>
+        <!-- Content Area (The "Sheet" Effect) -->
+        <div class="flex-1 relative overflow-hidden pl-6 pb-6 pr-6">
+            <div class="w-full h-full bg-white rounded-[2.5rem] relative overflow-hidden shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-slate-100">
+                
+                <!-- Loader -->
+                <div id="loader" class="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-20">
+                    <div class="flex flex-col items-center gap-6">
+                        <div class="relative">
+                            <div class="w-20 h-20 border-4 border-slate-100 border-t-[#17A24E] border-b-[#1A8E7D] rounded-full animate-spin"></div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-leaf text-[#17A24E] text-2xl animate-pulse"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#17A24E] to-[#1A8E7D] uppercase tracking-[0.3em] animate-pulse">Loading View</p>
+                    </div>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-500 text-sm uppercase">
-                                <th class="p-3 rounded-l-lg">ID</th>
-                                <th class="p-3">Description</th>
-                                <th class="p-3">Amount</th>
-                                <th class="p-3 rounded-r-lg">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-sm">
-                            <?php foreach($transactions as $t): ?>
-                            <tr class="border-b border-gray-100 hover:bg-green-50 transition">
-                                <td class="p-3 font-mono text-gray-600">#<?php echo $t['id']; ?></td>
-                                <td class="p-3 text-gray-700"><?php echo $t['description']; ?></td>
-                                <td class="p-3 font-bold text-green-600">+₹<?php echo number_format($t['amount'], 2); ?></td>
-                                <td class="p-3 text-gray-400 text-xs"><?php echo $t['date']; ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                <!-- Iframe -->
+                <iframe id="content-frame" name="content-frame" src="tree.php" class="w-full h-full border-0 relative z-10 opacity-0 rounded-[2.5rem]"></iframe>
             </div>
         </div>
     </div>
 
-    <!-- ADMIN ADD MEMBER MODAL -->
-    <div id="adminAddModal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 backdrop-blur-sm">
-        <div class="modal-content bg-white w-full max-w-md mx-4 rounded-2xl shadow-2xl overflow-hidden">
-            
-            <div class="bg-gray-800 p-4 flex justify-between items-center text-white">
-                <h3 class="font-bold text-lg"><i class="fas fa-plus-circle mr-2"></i>Add Direct Associate</h3>
-                <button onclick="closeModal()" class="hover:bg-gray-700 p-1 rounded transition"><i class="fas fa-times"></i></button>
-            </div>
+    <!-- Overlay for Mobile Sidebar -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300"></div>
 
-            <form action="add_logic.php" method="POST" class="p-6">
-                
-                <div class="mb-4">
-                    <label class="block text-gray-600 text-sm font-bold mb-2">Full Name</label>
-                    <input type="text" name="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 transition" placeholder="Enter Full Name" required>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-600 text-sm font-bold mb-2">Username</label>
-                    <input type="text" name="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 transition" placeholder="Enter Username" required>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-gray-600 text-sm font-bold mb-2">Password</label>
-                    <input type="text" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 transition" placeholder="Enter Password" required>
-                </div>
-
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-                    <p class="text-xs text-blue-800"><i class="fas fa-info-circle mr-1"></i> This user will be added directly under <strong>Master Admin</strong> as Level 1.</p>
-                </div>
-
-                <div class="flex gap-3">
-                    <button type="button" onclick="closeModal()" class="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-lg hover:bg-gray-200 transition">Cancel</button>
-                    <button type="submit" class="flex-1 bg-gray-800 text-white font-bold py-3 rounded-lg hover:bg-gray-900 transition shadow-lg">Create Associate</button>
-                </div>
-
-            </form>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
-        AOS.init();
-        function openModal() { document.getElementById('adminAddModal').classList.add('active'); }
-        function closeModal() { document.getElementById('adminAddModal').classList.remove('active'); }
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menu-toggle');
+        const overlay = document.getElementById('sidebar-overlay');
+        const links = document.querySelectorAll('.nav-item');
+        const iframe = document.getElementById('content-frame');
+        const pageTitle = document.getElementById('page-title');
+        const loader = document.getElementById('loader');
+
+        // Date Display
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('date-display').innerText = new Date().toLocaleDateString('en-US', dateOptions);
+
+        // Mobile Menu Logic
+        function toggleSidebar() {
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+        menuToggle.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+
+        // Navigation Interaction
+        links.forEach(link => {
+            link.addEventListener('click', function() {
+                // Active State Styling
+                links.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update Header Title with Animation
+                const text = this.querySelector('.nav-text').innerText;
+                pageTitle.style.opacity = '0';
+                pageTitle.style.transform = 'translateY(-10px)';
+                
+                setTimeout(() => {
+                    pageTitle.innerText = text;
+                    pageTitle.style.opacity = '1';
+                    pageTitle.style.transform = 'translateY(0)';
+                }, 300);
+                
+                // Show Loader & Hide Iframe
+                iframe.style.opacity = '0';
+                loader.style.display = 'flex';
+                
+                // Close mobile sidebar if open
+                if(window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) {
+                    toggleSidebar();
+                }
+            });
+        });
+
+        // Iframe Load Handler
+        iframe.addEventListener('load', () => {
+            setTimeout(() => {
+                iframe.style.opacity = '1';
+                loader.style.display = 'none'; 
+            }, 500); // Artificial delay for premium feel
+        });
+        
+        // Initialize First Item
+        if(links.length > 0) links[0].classList.add('active');
+        
+        // Title Fade Transition
+        pageTitle.style.transition = 'all 0.4s ease-out';
     </script>
 </body>
 </html>

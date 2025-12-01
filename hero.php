@@ -27,25 +27,25 @@ $products = [
         'name' => 'Vitality Greens',
         'cat' => 'Daily Wellness',
         'price' => '55.00',
-        'img' => 'https://images.unsplash.com/photo-1593037515494-3b5033ee268d?auto=format&fit=crop&w=400&q=80'
+        'img' => 'https://plus.unsplash.com/premium_photo-1663099689787-9f6fae96016a?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8Vml0YWxpdHklMjBHcmVlbnN8ZW58MHx8MHx8fDA%3D'
     ],
     [
         'name' => 'Stress Relief',
         'cat' => 'Mood Balance',
         'price' => '42.00',
-        'img' => 'https://images.unsplash.com/photo-1616671225572-36c97e189354?auto=format&fit=crop&w=400&q=80'
+        'img' => 'https://plus.unsplash.com/premium_photo-1661340603653-bb3efc02636e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8U3RyZXNzJTIwUmVsaWVmJTIwaGVyYmFsJTIwcHJvZHVjdHxlbnwwfHwwfHx8MA%3D%3D'
     ],
     [
         'name' => 'Joint Flex',
         'cat' => 'Mobility',
         'price' => '38.00',
-        'img' => 'https://images.unsplash.com/photo-1550572017-4fcd95616f73?auto=format&fit=crop&w=400&q=80'
+        'img' => 'https://images.unsplash.com/photo-1632205357749-393ee0306fdc?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8Sm9pbnQlMjBGbGV4JTIwaGVyYmFsJTIwcHJvZHVjdHxlbnwwfHwwfHx8MA%3D%3D'
     ],
     [
         'name' => 'Gut Harmony',
         'cat' => 'Digestion',
         'price' => '49.00',
-        'img' => 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b5?auto=format&fit=crop&w=400&q=80'
+        'img' => 'https://media.istockphoto.com/id/970095144/photo/fennel-essential-oil-in-a-green-glass-bottle-and-bulb-on-wooden-background.webp?a=1&b=1&s=612x612&w=0&k=20&c=5YajRli-c71svWBgt0EnzK8voGxeZWNqEkQm0-erGJM='
     ],
     [
         'name' => 'Deep Sleep',
@@ -203,7 +203,7 @@ $products = [
 
                 <div class="relative" data-aos="zoom-in" data-aos-duration="1200" data-aos-delay="200">
                     <div class="relative z-20 mx-auto w-3/4 lg:w-full">
-                        <img src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="eBiotheraphy Bottle" class="rounded-3xl shadow-2xl drop-shadow-2xl transform hover:scale-105 transition duration-700">
+                        <img src="https://images.unsplash.com/photo-1729324738509-7935838d5ef9?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8aGVyYmFsJTIwcHJvZHVjdCUyMGhlcm8lMjBzZWN0aW9uJTIwd2Vic2l0ZXxlbnwwfHwwfHx8MA%3D%3D" alt="eBiotheraphy Bottle" class="rounded-3xl shadow-2xl drop-shadow-2xl transform hover:scale-105 transition duration-700">
                     </div>
                     
                     <div class="absolute top-1/4 -left-6 bg-white/90 backdrop-blur p-4 rounded-2xl shadow-xl z-30 animate-float" style="animation-delay: 1s;">
@@ -619,24 +619,7 @@ $products = [
         </div>
     </section>
 
-    <footer class="bg-gray-50 border-t border-gray-200 py-12">
-        <div class="max-w-7xl mx-auto px-4 flex flex-col items-center justify-center text-center">
-            <div class="flex items-center gap-2 mb-6 text-gray-400">
-                <i class="fas fa-leaf text-2xl"></i>
-                <span class="font-bold text-xl">eBiotheraphy</span>
-            </div>
-            <p class="text-gray-500 text-sm max-w-md mb-8">
-                These statements have not been evaluated by the Food and Drug Administration. This product is not intended to diagnose, treat, cure, or prevent any disease.
-            </p>
-            <div class="flex gap-6 mb-8">
-                <a href="#" class="text-gray-400 hover:text-teal-600"><i class="fab fa-instagram text-xl"></i></a>
-                <a href="#" class="text-gray-400 hover:text-teal-600"><i class="fab fa-facebook text-xl"></i></a>
-                <a href="#" class="text-gray-400 hover:text-teal-600"><i class="fab fa-twitter text-xl"></i></a>
-            </div>
-            <p class="text-gray-400 text-xs">&copy; <?php echo date('Y'); ?> eBiotheraphy LLC. All rights reserved. <a href="index2.php" class="underline hover:text-teal-600">Member Login</a></p>
-        </div>
-    </footer>
-
+  
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
         // Init Animation Library

@@ -4,11 +4,10 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
 
 // Define navigation items (Product/Customer focused)
 $nav_items = [
-    'HOME' => 'index.php',
-    'OUR PRODUCTS' => 'products.php', // You can create this later
-    'WELLNESS SCIENCE' => 'about.php',
-    'TESTIMONIALS' => 'reviews.php',
-    'CONTACT' => 'contact.php'
+    'HOME' => 'index',
+    'WELLNESS SCIENCE' => 'about',
+    'OUR PRODUCTS' => 'products', // You can create this later
+    'CONTACT' => 'contact'
 ];
 
 // Database Connection for dynamic settings
@@ -94,7 +93,7 @@ $phone = $settings['phone'] ?? '+1 800 123 4567';
                         <i class="fas fa-shopping-bag text-xl"></i>
                         <span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">0</span>
                     </a>
-                    <a href="index2.php" class="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-6 py-2.5 rounded-full text-sm font-medium shadow-lg shadow-green-200 transition transform hover:-translate-y-0.5">
+                    <a href="index2" class="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-6 py-2.5 rounded-full text-sm font-medium shadow-lg shadow-green-200 transition transform hover:-translate-y-0.5">
                         <i class="fas fa-user-circle mr-2"></i> Member Zone
                     </a>
                 </div>
